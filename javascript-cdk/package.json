@@ -1,0 +1,26 @@
+{
+  "name": "backend",
+  "version": "0.1.0",
+  "bin": {
+    "backend": "bin/backend.js"
+  },
+  "scripts": {
+    "build": "echo \"The build step is not required when using JavaScript!\" && exit 0",
+    "cdk": "cdk",
+    "test": "jest",
+    "synth:test": "cdk synth -c env=test",
+    "synth:live": "cdk synth -c env=live",
+    "deploy:test": "cdk deploy -c env=test",
+    "deploy:live": "cdk deploy -c env=live"
+  },
+  "devDependencies": {
+    "aws-cdk": "2.99.1",
+    "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.540.0",
+    "@aws-sdk/lib-dynamodb": "^3.540.0",
+    "aws-cdk-lib": "2.99.1",
+    "constructs": "^10.0.0"
+  }
+}
