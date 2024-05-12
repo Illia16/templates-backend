@@ -77,10 +77,11 @@ class BackendStack extends cdk.Stack {
       }
     );
     const route = api.root.addResource("api");
-    route.addMethod("GET");
-    route.addMethod("POST");
-    route.addMethod("PUT");
-    route.addMethod("DELETE");
+    const v1_route = route.addResource("v1")
+    v1_route.addMethod("GET");
+    v1_route.addMethod("POST");
+    v1_route.addMethod("PUT");
+    v1_route.addMethod("DELETE");
   }
 }
 
