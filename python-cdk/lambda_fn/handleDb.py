@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import uuid
 import boto3
+from dynamodb_json import json_util as dynamodb_output_handle
 
 def lambda_db_handler(event, context):
     # Environment variables
@@ -45,6 +46,7 @@ def lambda_db_handler(event, context):
         }
 
         res = dynamodb.scan(**params)
+        dynamodb_output_handle.loads(res)
         data = res
 
     if action == 'POST':
