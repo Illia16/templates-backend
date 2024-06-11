@@ -35,7 +35,7 @@ class BackendStack extends cdk.Stack {
       this,
       `${props.env.projectName}--lambda-fn-${props.env.stage}`,
       {
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_18_X, // NODEJS_20_X currently not working.
         handler: "index.handle",
         code: lambda.Code.fromAsset(path.join(__dirname, "functions")),
         functionName: `${props.env.projectName}--lambda-fn-${props.env.stage}`,

@@ -17,7 +17,7 @@
   },
   "context": {
     "account": "177749704705",
-    "env": "live",
+    "env": "javascript",
     "projectName": "test-project",
     "site_url_test": "domain_goes_here",
     "site_url_live": "domain_goes_here",

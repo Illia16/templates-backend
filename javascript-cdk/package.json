@@ -8,10 +8,8 @@
     "build": "echo \"The build step is not required when using JavaScript!\" && exit 0",
     "cdk": "cdk",
     "test": "jest",
-    "synth:test": "cdk synth -c env=test",
-    "synth:live": "cdk synth -c env=live",
-    "deploy:test": "cdk deploy -c env=test",
-    "deploy:live": "cdk deploy -c env=live"
+    "synth:javascript": "cdk synth -c env=javascript",
+    "deploy:javascript": "cdk deploy -c env=javascript"
   },
   "devDependencies": {
     "aws-cdk": "2.99.1",
