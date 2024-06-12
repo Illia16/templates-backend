@@ -7,5 +7,6 @@
 
 ## python
 - cd python-cdk
-- .venv\Scripts\activate.bat
+- python -m pip install -r requirements.txt
+- .venv\Scripts\activate.bat (Windows) (source .venv/bin/activate (Mac))
 - cdk deploy
