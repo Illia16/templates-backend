@@ -39,8 +39,13 @@ module.exports = async (event, context) => {
         };
 
         const command = new ScanCommand(params);
-        const res = await docClient.send(command);
-        response.body = JSON.stringify({success: true, data: res});
+
+        try {
+            const res = await docClient.send(command);
+            response.body = JSON.stringify({success: true, data: res.Items});
+        } catch (error) {
+            response.body = JSON.stringify({success: false, error: error});
+        }
     }
 
     if (action === 'POST') {
@@ -58,8 +63,13 @@ module.exports = async (event, context) => {
         };
 
         const command = new BatchWriteCommand(input);
-        const res = await client.send(command);
-        response.body = JSON.stringify({success: true, data: res});
+        try {
+            const res = await client.send(command);
+            response.body = JSON.stringify({success: true, data: res});
+        } catch (error) {
+            response.body = JSON.stringify({success: false, error: error});
+
+        }
     }
 
     if (action === 'DELETE') {
@@ -77,8 +87,13 @@ module.exports = async (event, context) => {
         };
 
         const command = new BatchWriteCommand(input);
-        const res = await client.send(command);
-        response.body = JSON.stringify({success: true, data: res});
+
+        try {
+            const res = await client.send(command);
+            response.body = JSON.stringify({success: true, data: res});
+        } catch (error) {
+            response.body = JSON.stringify({success: false, error: error});
+        }
     }
 
     return response;
