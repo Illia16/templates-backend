@@ -31,10 +31,19 @@ class PythonCdkStack(Stack):
             sort_key=dynamodb.Attribute(name="time", type=dynamodb.AttributeType.STRING)
         )
 
-        lambdaFbDynamoDb = aws_lambda.Function(self, f"{projectName}--lambda-fn-{stage}", 
+        lambdaFbDynamoDb = aws_lambda.Function(self, f"{projectName}--lambda-fn-{stage}",
             runtime=aws_lambda.Runtime.PYTHON_3_11,
             handler="handleDb.lambda_db_handler",
-            code=aws_lambda.Code.from_asset('lambda_fn'),
+            code=aws_lambda.Code.from_asset(
+                'lambda_fn',
+                # bundling=aws_lambda.BundlingOptions(
+                #     image=aws_lambda.Runtime.PYTHON_3_11.bundling_image,
+                #     command=[
+                #         "bash", "-c",
+                #         "pip install --no-cache -r requirements.txt -t /asset-output && cp -au . /asset-output"
+                #     ],
+                # ),
+            ),
             # code=aws_lambda.Code.from_asset('python_cdk/functions/handle'),
             # code=aws_lambda.Code.from_asset(os.path.join(os.path.dirname(__file__), "functions/handle")),
             function_name=f"{projectName}--lambda-fn-{stage}",
