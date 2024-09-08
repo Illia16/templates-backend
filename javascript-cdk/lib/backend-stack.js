@@ -15,11 +15,15 @@ class BackendStack extends cdk.Stack {
   constructor(scope, id, props) {
     super(scope, id, props);
 
+    const STAGE = props.env.STAGE;
+    const PROJECT_NAME = props.env.PROJECT_NAME;
+    const CLOUDFRONT_URL = props.env.CLOUDFRONT_URL;
+
     const myDB = new dynamoDb.TableV2(
       this,
-      `${props.env.projectName}--myDB--${props.env.stage}`,
+      `${PROJECT_NAME}--myDB--${STAGE}`,
       {
-        tableName: `${props.env.projectName}--myDB--${props.env.stage}`,
+        tableName: `${PROJECT_NAME}--myDB--${STAGE}`,
         partitionKey: {
           name: "item",
           type: dynamoDb.AttributeType.STRING,
@@ -33,17 +37,16 @@ class BackendStack extends cdk.Stack {
 
     const lambdaFnDynamoDb = new lambda.Function(
       this,
-      `${props.env.projectName}--lambda-fn-${props.env.stage}`,
+      `${PROJECT_NAME}--lambda-fn-${STAGE}`,
       {
-        runtime: lambda.Runtime.NODEJS_18_X, // NODEJS_20_X currently not working.
+        runtime: lambda.Runtime.NODEJS_20_X,
         handler: "index.handle",
         code: lambda.Code.fromAsset(path.join(__dirname, "functions")),
-        functionName: `${props.env.projectName}--lambda-fn-${props.env.stage}`,
+        functionName: `${PROJECT_NAME}--lambda-fn-${STAGE}`,
         environment: {
-          env: props.env.stage,
-          projectName: props.env.projectName,
-          site_url_test: props.env.site_url_test,
-          site_url_live: props.env.site_url_live,
+          STAGE: STAGE,
+          PROJECT_NAME: PROJECT_NAME,
+          CLOUDFRONT_URL: CLOUDFRONT_URL,
         },
       }
     );
@@ -58,20 +61,17 @@ class BackendStack extends cdk.Stack {
 
     const api = new apiGateway.LambdaRestApi(
       this,
-      `${props.env.projectName}--api--${props.env.stage}`,
+      `${PROJECT_NAME}--api--${STAGE}`,
       {
         handler: lambdaFnDynamoDb,
         deployOptions: {
-          stageName: props.env.stage,
+          stageName: STAGE,
         },
         proxy: false,
-        restApiName: `${props.env.projectName}--api--${props.env.stage}`,
+        restApiName: `${PROJECT_NAME}--api--${STAGE}`,
         description: "API to get/update/post/delete items",
         defaultCorsPreflightOptions: {
-          allowOrigins:
-            props.env.stage === "prod"
-              ? [props.env.site_url_live]
-              : ["http://localhost:3000", props.env.site_url_test],
+          allowOrigins: ['http://localhost:3000', CLOUDFRONT_URL],
           allowMethods: apiGateway.Cors.ALL_METHODS,
         },
       }

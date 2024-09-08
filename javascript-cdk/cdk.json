@@ -1,6 +1,5 @@
 {
   "app": "node bin/backend.js",
-  "profile": "personal",
   "watch": {
     "include": [
       "**"
@@ -16,11 +15,6 @@
     ]
   },
   "context": {
-    "account": "177749704705",
-    "env": "javascript",
-    "projectName": "test-project",
-    "site_url_test": "domain_goes_here",
-    "site_url_live": "domain_goes_here",
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/core:target-partitions": [
