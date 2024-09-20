@@ -35,19 +35,36 @@ class BackendStack extends cdk.Stack {
       }
     );
 
+
+    const lambdaLayer = new lambda.LayerVersion(this, `${PROJECT_NAME}--fn-layer--${STAGE}`, {
+      layerVersionName: `${PROJECT_NAME}--fn-layer--${STAGE}`,
+      code: lambda.Code.fromAsset(path.join(__dirname, 'functions'), {
+        bundling: {
+            image: lambda.Runtime.NODEJS_20_X.bundlingImage,
+            command: [
+                'bash', '-c',
+                'mkdir -p /asset-output/nodejs && cp -r ./node_modules /asset-output/nodejs/'
+            ],
+        },
+      }),
+      compatibleArchitectures: [lambda.Architecture.X86_64, lambda.Architecture.ARM_64],
+      compatibleRuntimes: [lambda.Runtime.NODEJS_18_X, lambda.Runtime.NODEJS_20_X]
+    });
+
     const lambdaFnDynamoDb = new lambda.Function(
       this,
       `${PROJECT_NAME}--lambda-fn-${STAGE}`,
       {
         runtime: lambda.Runtime.NODEJS_20_X,
-        handler: "index.handle",
-        code: lambda.Code.fromAsset(path.join(__dirname, "functions")),
+        handler: 'handle/index.handler',
+        code: lambda.Code.fromAsset(path.join(__dirname, 'functions'), { exclude: ['node_modules'] }),
         functionName: `${PROJECT_NAME}--lambda-fn-${STAGE}`,
         environment: {
           STAGE: STAGE,
           PROJECT_NAME: PROJECT_NAME,
           CLOUDFRONT_URL: CLOUDFRONT_URL,
         },
+        layers: [lambdaLayer]
       }
     );
 

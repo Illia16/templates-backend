@@ -5,7 +5,7 @@ const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 const { v4: uuidv4 } = require("uuid");
 
-module.exports = async (event, context) => {
+module.exports.handler = async (event, context) => {
 
     // Environment variables
     const STAGE = process.env.STAGE;
@@ -15,7 +15,7 @@ module.exports = async (event, context) => {
     const headers = event.headers;
     const allowedOrigins = ["http://localhost:3000", CLOUDFRONT_URL];
     const headerOrigin = allowedOrigins.includes(headers?.origin) ? headers?.origin : null
-    const action = event.httpMethod;
+    const action = event.httpMethod;    
 
     // AWS Resource names
     const dbData = `${PROJECT_NAME}--myDB--${STAGE}`;
