@@ -3,6 +3,10 @@ const iam = require("aws-cdk-lib/aws-iam");
 const dynamoDb = require("aws-cdk-lib/aws-dynamodb");
 const lambda = require("aws-cdk-lib/aws-lambda");
 const apiGateway = require("aws-cdk-lib/aws-apigateway");
+const acm = require('aws-cdk-lib/aws-certificatemanager');
+const s3 = require('aws-cdk-lib/aws-s3');
+const cloudfront = require('aws-cdk-lib/aws-cloudfront');
+const origins = require('aws-cdk-lib/aws-cloudfront-origins');
 const path = require("path");
 
 class BackendStack extends cdk.Stack {
@@ -18,6 +22,9 @@ class BackendStack extends cdk.Stack {
     const STAGE = props.env.STAGE;
     const PROJECT_NAME = props.env.PROJECT_NAME;
     const CLOUDFRONT_URL = props.env.CLOUDFRONT_URL;
+    const CERTIFICATE_ARN = props.env.CERTIFICATE_ARN;
+
+    const ssl_cert = acm.Certificate.fromCertificateArn(this, `${PROJECT_NAME}--certificate--${STAGE}`, CERTIFICATE_ARN); // uploaded manually
 
     const myDB = new dynamoDb.TableV2(
       this,
@@ -35,6 +42,44 @@ class BackendStack extends cdk.Stack {
       }
     );
 
+
+    const cfFunction = new cloudfront.Function(this, `${PROJECT_NAME}--cf-fn--${STAGE}`, {
+        code: cloudfront.FunctionCode.fromFile({
+            filePath: __dirname + '/cf-functions/index.js',
+        }),
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        functionName: `${PROJECT_NAME}--cf-fn--${STAGE}`,
+        comment: 'CF function to handle redirects, basic auth, redirects from cf domain to a custom one etc.',
+    });
+
+    const websiteBucket = new s3.Bucket(this, `${PROJECT_NAME}--s3-site--${STAGE}`, {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      bucketName: `${PROJECT_NAME}--s3-site--${STAGE}`,
+    });
+
+    // CloudFront
+    new cloudfront.Distribution(this, `${PROJECT_NAME}--cf--${STAGE}`, {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(websiteBucket), // Automatically creates a S3OriginAccessControl construct
+        functionAssociations: [{
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: cfFunction,
+        }],
+      },
+      // additionalBehaviors: {
+      //   '/api/*': {
+      //     origin: new origins.HttpOrigin(`${PROJECT_NAME}-${STAGE}.illusha.net`, {
+      //       originPath: '/api',
+      //     }),
+      //     cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+      //     originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER,
+      //   },
+      // },
+      certificate: ssl_cert,
+      domainNames: [`${PROJECT_NAME}-${STAGE}.illusha.net`],
+      minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+      sslSupportMethod: cloudfront.SSLMethod.SNI,
+    });
 
     const lambdaLayer = new lambda.LayerVersion(this, `${PROJECT_NAME}--fn-layer--${STAGE}`, {
       layerVersionName: `${PROJECT_NAME}--fn-layer--${STAGE}`,
@@ -76,6 +121,21 @@ class BackendStack extends cdk.Stack {
       )
     );
 
+    // Allow Lambda fn to sent SES emails
+    lambdaFnDynamoDb.addToRolePolicy(new iam.PolicyStatement({
+        actions: [
+            "ses:SendEmail",
+        ],
+        resources: "*", // ???
+        effect: iam.Effect.ALLOW,
+        conditions: {
+          StringEquals: {
+            "ses:FromAddress": `${PROJECT_NAME}-${STAGE}@devemail.illusha.net`,
+          }
+        }
+    }),)
+
+
     const api = new apiGateway.LambdaRestApi(
       this,
       `${PROJECT_NAME}--api--${STAGE}`,
@@ -83,6 +143,12 @@ class BackendStack extends cdk.Stack {
         handler: lambdaFnDynamoDb,
         deployOptions: {
           stageName: STAGE,
+          description: `API template using AWS CDK ${STAGE}`,
+        },
+        domainName: {
+          domainName: `api-${PROJECT_NAME}-${STAGE}.illusha.net`, // test-project-javascript.illusha.net OR is multiple projects use the same API can be api.*
+          certificate: ssl_cert,
+          // basePath: 'api'
         },
         proxy: false,
         restApiName: `${PROJECT_NAME}--api--${STAGE}`,
@@ -91,14 +157,46 @@ class BackendStack extends cdk.Stack {
           allowOrigins: ['http://localhost:3000', CLOUDFRONT_URL],
           allowMethods: apiGateway.Cors.ALL_METHODS,
         },
+        disableExecuteApiEndpoint: true,
       }
     );
-    const route = api.root.addResource("api");
-    const v1_route = route.addResource("v1")
-    v1_route.addMethod("GET");
-    v1_route.addMethod("POST");
-    v1_route.addMethod("PUT");
-    v1_route.addMethod("DELETE");
+    const route = api.root.addResource("v1");
+    ['GET', 'POST', 'PUT', 'DELETE'].forEach(method => {
+      route.addMethod(method, new apiGateway.LambdaIntegration(lambdaFnDynamoDb), {
+        apiKeyRequired: true,
+        requestParameters: {
+          'method.request.header.x-api-key': true,
+        }
+      });
+    });
+
+    // const subRoute = route.addResource('{subpath}');
+    // subRoute.addMethod('GET');
+    // subRoute.addMethod('POST');
+    // subRoute.addMethod('PUT');
+    // subRoute.addMethod('DELETE');
+
+    const apiUsagePlan = api.addUsagePlan(`${PROJECT_NAME}--api-usage-plan--${STAGE}`, {
+      name: `${PROJECT_NAME}--api-usage-plan--${STAGE}`,
+      description: `API usage plan to handle number of requests.`,
+      quota: {
+        limit: 1000,
+        period: apiGateway.Period.DAY,
+      },
+      throttle: {
+        rateLimit: 100,
+        burstLimit: 200,
+      },
+    });
+
+    const apiKeykey = api.addApiKey(`${PROJECT_NAME}--api-key--${STAGE}`, {
+      apiKeyName: `${PROJECT_NAME}--api-key--${STAGE}`,
+      description: `API Key for ${PROJECT_NAME}--api-key--${STAGE} project.`
+    });
+    apiUsagePlan.addApiKey(apiKeykey);
+    apiUsagePlan.addApiStage({
+      stage: api.deploymentStage,
+    });
   }
 }
 

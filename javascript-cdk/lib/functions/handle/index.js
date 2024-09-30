@@ -4,6 +4,7 @@ const { DynamoDBDocumentClient, ScanCommand, BatchWriteCommand } = require("@aws
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 const { v4: uuidv4 } = require("uuid");
+const helpers = require('../helpers')
 
 module.exports.handler = async (event, context) => {
 
@@ -97,6 +98,10 @@ module.exports.handler = async (event, context) => {
         } catch (error) {
             response.body = JSON.stringify({success: false, error: error});
         }
+    }
+
+    if (body?.email) {
+        await helpers.sendEmail({email: body.email, subject: body.subject, message: body.message});
     }
 
     return response;
