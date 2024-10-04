@@ -57,10 +57,17 @@ class BackendStack extends cdk.Stack {
       bucketName: `${PROJECT_NAME}--s3-site--${STAGE}`,
     });
 
+    const oac = new cloudfront.S3OriginAccessControl(this, `${PROJECT_NAME}--oac--${STAGE}`, {
+        originAccessControlName: `${PROJECT_NAME}--oac--${STAGE}`,
+        signing: cloudfront.Signing.SIGV4_ALWAYS,
+    });
+
     // CloudFront
-    new cloudfront.Distribution(this, `${PROJECT_NAME}--cf--${STAGE}`, {
+    const cf = new cloudfront.Distribution(this, `${PROJECT_NAME}--cf--${STAGE}`, {
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(websiteBucket), // Automatically creates a S3OriginAccessControl construct
+        origin: origins.S3BucketOrigin.withOriginAccessControl(websiteBucket, {
+            originAccessControl: oac,
+        }),
         functionAssociations: [{
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
             function: cfFunction,
@@ -80,6 +87,19 @@ class BackendStack extends cdk.Stack {
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
       sslSupportMethod: cloudfront.SSLMethod.SNI,
     });
+
+    // Add the below so that it handles the files (if file is not avaialbe, it returns 404, not 403)
+    websiteBucket.addToResourcePolicy(new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        principals: [new iam.ServicePrincipal('cloudfront.amazonaws.com')],
+        actions: ['s3:ListBucket'],
+        resources: [websiteBucket.bucketArn],
+        conditions: {
+            StringEquals: {
+              "aws:SourceArn": `arn:aws:cloudfront::${cdk.Stack.of(this).account}:distribution/${cf.distributionId}`,
+            },
+        }
+    }));
 
     const lambdaLayer = new lambda.LayerVersion(this, `${PROJECT_NAME}--fn-layer--${STAGE}`, {
       layerVersionName: `${PROJECT_NAME}--fn-layer--${STAGE}`,
