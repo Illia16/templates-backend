@@ -3,9 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>AWS CDK template JavaScript</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 </head>
+
 <body>
     <h1>AWS CDK template JavaScript</h1>
+    <form>
+        <div>
+            <label for="email">
+                Email
+            </label>
+            <input
+                type="email"
+                name="email"
+                id="email"
+            />
+        </div>
+
+        <div>
+            <label for="subject">
+                Subject
+            </label>
+            <input
+                type="text"
+                name="subject"
+                id="subject"
+            />
+        </div>
+
+        <div>
+            <label for="message">
+                Message
+            </label>
+            <textarea 
+                name="message" 
+                id="message"
+                placeholder="Write your message here."
+            >
+            </textarea>
+        </div>
+
+        <div>
+            <label htmlFor="attachment">
+                Choose file
+            </label>
+            <input
+                type="file"
+                name="attachment"
+                id="attachment"
+            />
+        </div>
+
+        <button id="submit">Submit</button>
+    </form>
 </body>
+
+<script type="module">
+import { API_URL, API_KEY } from './config.js';
+
+(function() {
+    let file;
+    let isLargeFile;
+    let largeFilename;
+    const handleFile = (e) => {
+        if (!e.target.files) return;
+        file = e.target.files[0];
+
+        if (file.size > 5242880) {
+            isLargeFile = file.size > 5242880;
+            largeFilename = file.name;
+        }
+    };
+
+    const preparePayload = (fileAsUrl = false) => {
+        const payload = new FormData();
+        const email = document.querySelector('#email').value;
+        const subject = document.querySelector('#subject').value;
+        const message = document.querySelector('#message').value;
+        
+        payload.append('email', email);
+        payload.append('subject', subject);
+        payload.append('message', message);
+        if (file && !isLargeFile) payload.append('file', file);
+        if (isLargeFile) {
+            payload.append('largeFilename', largeFilename);
+        }
+        if (fileAsUrl) {
+            payload.append('fileAsUrl', true);
+        }
+        return payload;
+    }
+
+    const uploadLargeFile = async (res) => {
+        const presignedData = res.data;
+        const file = document.getElementById('attachment').files[0];
+        const formData = new FormData();
+        Object.entries(presignedData.fields).forEach(([key, value]) => {
+            formData.append(key, value);
+        });
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(presignedData.url, {
+                method: 'POST',
+                body: formData,
+            });
+        } catch (error) {
+            console.error('Error uploading file:', error);
+        }
+    }
+
+    const submitForm = async (e) => {
+        e.preventDefault();
+        const payload = preparePayload();
+
+        try {
+            const res = await fetch(API_URL, {
+                method: 'PUT',
+                body: payload,
+                headers: {
+                    "x-api-key": API_KEY,
+                }
+            }).then(res=> res.json());
+            if (res.data) {
+                // If there is data, handle large file upload
+                await uploadLargeFile(res);
+                const newPayload = preparePayload(true);
+
+                // Send another PUT request to send email with attachment as URL
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    body: newPayload,
+                    headers: {
+                        "x-api-key": API_KEY,
+                    }
+                });
+            }
+        } catch (err) {
+            console.log('err', err);
+        }
+    }
+
+    const fileInput = document.getElementById('attachment');
+    fileInput.addEventListener('change', handleFile);
+
+    const submitBtn = document.getElementById('submit');
+    submitBtn.addEventListener('click', submitForm);
+})();
+</script>
 </html>

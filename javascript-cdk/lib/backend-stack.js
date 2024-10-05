@@ -23,6 +23,8 @@ class BackendStack extends cdk.Stack {
     const PROJECT_NAME = props.env.PROJECT_NAME;
     const CLOUDFRONT_URL = props.env.CLOUDFRONT_URL;
     const CERTIFICATE_ARN = props.env.CERTIFICATE_ARN;
+  
+    const account = cdk.Stack.of(this).account;
 
     const ssl_cert = acm.Certificate.fromCertificateArn(this, `${PROJECT_NAME}--certificate--${STAGE}`, CERTIFICATE_ARN); // uploaded manually
 
@@ -57,6 +59,16 @@ class BackendStack extends cdk.Stack {
       bucketName: `${PROJECT_NAME}--s3-site--${STAGE}`,
     });
 
+     // Add CORS configuration
+     websiteBucket.addCorsRule({
+      allowedHeaders: ['*'],
+      allowedMethods: [
+        s3.HttpMethods.POST,
+      ],
+      allowedOrigins: ['http://localhost:3000', CLOUDFRONT_URL],
+      maxAge: 3000,
+    });
+
     const oac = new cloudfront.S3OriginAccessControl(this, `${PROJECT_NAME}--oac--${STAGE}`, {
         originAccessControlName: `${PROJECT_NAME}--oac--${STAGE}`,
         signing: cloudfront.Signing.SIGV4_ALWAYS,
@@ -67,6 +79,7 @@ class BackendStack extends cdk.Stack {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(websiteBucket, {
             originAccessControl: oac,
+            originPath: '/site',
         }),
         functionAssociations: [{
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
@@ -86,6 +99,7 @@ class BackendStack extends cdk.Stack {
       domainNames: [`${PROJECT_NAME}-${STAGE}.illusha.net`],
       minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
       sslSupportMethod: cloudfront.SSLMethod.SNI,
+      defaultRootObject: 'index.html',
     });
 
     // Add the below so that it handles the files (if file is not avaialbe, it returns 404, not 403)
@@ -96,10 +110,25 @@ class BackendStack extends cdk.Stack {
         resources: [websiteBucket.bucketArn],
         conditions: {
             StringEquals: {
-              "aws:SourceArn": `arn:aws:cloudfront::${cdk.Stack.of(this).account}:distribution/${cf.distributionId}`,
+              "aws:SourceArn": `arn:aws:cloudfront::${account}:distribution/${cf.distributionId}`,
             },
         }
-    }));
+      })
+    );
+    // add for PresignUrl
+    websiteBucket.addToResourcePolicy(new iam.PolicyStatement({
+        sid: "Deny a presigned URL request if the signature is more than 10 min old",
+        effect: iam.Effect.DENY,
+        principals: [new iam.ArnPrincipal("*")],
+        actions: ['s3:PutObject'],
+        resources: [`${websiteBucket.bucketArn}/files/*`],
+        conditions: {
+            NumericGreaterThan: {
+              "s3:signatureAge": 60000 // give 1 min to upload a file to S3
+            },
+        }
+      })
+    );
 
     const lambdaLayer = new lambda.LayerVersion(this, `${PROJECT_NAME}--fn-layer--${STAGE}`, {
       layerVersionName: `${PROJECT_NAME}--fn-layer--${STAGE}`,
@@ -142,19 +171,27 @@ class BackendStack extends cdk.Stack {
     );
 
     // Allow Lambda fn to sent SES emails
-    lambdaFnDynamoDb.addToRolePolicy(new iam.PolicyStatement({
+    lambdaFnDynamoDb.addToRolePolicy(
+      new iam.PolicyStatement({
         actions: [
-            "ses:SendEmail",
+            "ses:SendRawEmail",
         ],
-        resources: "*", // ???
+        resources: "*",
         effect: iam.Effect.ALLOW,
         conditions: {
           StringEquals: {
             "ses:FromAddress": `${PROJECT_NAME}-${STAGE}@devemail.illusha.net`,
           }
         }
-    }),)
-
+      }),
+    );
+    lambdaFnDynamoDb.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:PutObject", "s3:GetObject"],
+        resources: [`${websiteBucket.bucketArn}/files/*`],
+        effect: iam.Effect.ALLOW,
+      }),
+    )
 
     const api = new apiGateway.LambdaRestApi(
       this,
@@ -178,6 +215,7 @@ class BackendStack extends cdk.Stack {
           allowMethods: apiGateway.Cors.ALL_METHODS,
         },
         disableExecuteApiEndpoint: true,
+        binaryMediaTypes: ['multipart/form-data'],
       }
     );
     const route = api.root.addResource("v1");
