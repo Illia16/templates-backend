@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket Test</title>
+</head>
+<body>
+  <h1>WebSocket Client</h1>
+
+  <!-- Button to send WebSocket message -->
+   <label>
+        <input type="text" id="count">
+   </label>
+  <button id="sendBtn">Increment</button>
+
+  <script>
+    // Establish a WebSocket connection
+    const ws = new WebSocket('ws://localhost:8080');
+
+    // Log when the WebSocket connection is opened
+    ws.onopen = () => {
+      console.log('WebSocket connection opened');
+    };
+
+    // Listen for messages from the server
+    ws.onmessage = (event) => {
+      console.log('Message from server:', event.data);
+    };
+
+    // Handle errors
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    // Handle connection close
+    ws.onclose = () => {
+      console.log('WebSocket connection closed');
+    };
+
+    // Send message only when the button is clicked
+    document.getElementById('sendBtn').addEventListener('click', () => {
+        const val = document.getElementById('count').value;
+        if (isNaN(val)) return;
+        
+        const message = JSON.stringify({
+            type: "count",
+            index: val
+        });
+        ws.send(message);
+        console.log('Message sent:', message);
+    });
+  </script>
+</body>
+</html>
