@@ -57,6 +57,40 @@
 
         <button id="submit">Submit</button>
     </form>
+
+    <div>
+        <h2>Counter</h2>
+        <div>
+            <input type="text" id="userName" placeholder="Enter your name">
+        </div>
+        <div>
+            <input type="text" id="connectionIdInput" placeholder="Enter ID (Optional)">
+        </div>
+        <div>
+            <button id="connectWebSocket">Create/Join</button>
+        </div>
+        <!-- TODO -->
+        <div id="createdConnectionId" style="display: none;">
+            Send this to a friend who wants to join:
+            <strong></strong>
+        </div>
+        <!--  -->
+
+        <br />
+        <div id="incrementData">
+            0
+        </div>
+        <div>
+            <input type="text" id="incrementValue" placeholder="Increment by" />
+        </div>
+        <div>
+            <button id="incrementCounter">Increment</button>
+        </div>
+
+        <div>
+            <button id="disconnect">Disconnect</button>
+        </div>
+    </div>
 </body>
 
 <script type="module">
@@ -152,4 +186,5 @@ import { API_URL, API_KEY } from './config.js';
     submitBtn.addEventListener('click', submitForm);
 })();
 </script>
+<script type="module" src="./scripts/websocketHandler.js"></script>
 </html>

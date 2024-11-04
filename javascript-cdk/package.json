@@ -8,8 +8,8 @@
     "build": "echo \"The build step is not required when using JavaScript!\" && exit 0",
     "cdk": "cdk",
     "test": "jest",
-    "synth:javascript": "dotenv -e .env.javascript -- cdk synth --profile personal",
-    "deploy:javascript": "dotenv -e .env.javascript -- cdk deploy --profile personal"
+    "synth:javascript": "dotenv -e .env.javascript -- cdk synth --all --profile personal",
+    "deploy:javascript": "dotenv -e .env.javascript -- cdk deploy --all --profile personal"
   },
   "devDependencies": {
     "aws-cdk": "^2.159.1",

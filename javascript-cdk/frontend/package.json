@@ -5,11 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "http-server -p 3000"
+    "start": "http-server -p 3000",
+    "deploy": "node bundle.js && node deploy.cjs"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "http-server": "^14.1.1"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5"
   }
 }

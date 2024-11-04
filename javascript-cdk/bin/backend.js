@@ -2,6 +2,7 @@
 
 const cdk = require('aws-cdk-lib');
 const { BackendStack } = require('../lib/backend-stack');
+const { WebSocketCounterStack } = require('../lib/WebSocketCounterStack');
 
 const app = new cdk.App();
 
@@ -27,4 +28,13 @@ new BackendStack(app, `${process.env.PROJECT_NAME}-stack-${process.env.ENV_NAME}
     CERTIFICATE_ARN: process.env.CERTIFICATE_ARN,
   },
   description: `Backend stack for ${process.env.PROJECT_NAME} for ${process.env.ENV_NAME} environment.`
+});
+
+new WebSocketCounterStack(app, `${process.env.PROJECT_NAME}-websocket-counter-stack-${process.env.ENV_NAME}`, {
+  env: {
+    region: 'us-east-1',
+    STAGE: process.env.ENV_NAME,
+    PROJECT_NAME: process.env.PROJECT_NAME,
+  },
+  description: `WebSocket Counter stack for ${process.env.PROJECT_NAME} in the ${process.env.ENV_NAME} environment.`
 });
