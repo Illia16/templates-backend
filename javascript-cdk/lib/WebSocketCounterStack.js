@@ -20,6 +20,17 @@ class WebSocketCounterStack extends cdk.Stack {
       tableName: `${PROJECT_NAME}--WebSocketCounterTable--${STAGE}`,
     });
 
+    // Lambda function for $default route
+    const defaultHandler = new lambda.Function(this, `${PROJECT_NAME}--WSDefaultHandler--${STAGE}`, {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      functionName: `${PROJECT_NAME}--WSDefaultHandler--${STAGE}`,
+      handler: 'default.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, 'functions-ws')),
+      environment: {
+        COUNTER_TABLE_NAME: counterTable.tableName,
+      }
+    });
+
     // Lambda function for connection handling
     const connectHandler = new lambda.Function(this, `${PROJECT_NAME}--WSConnectHandler--${STAGE}`, {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -54,6 +65,7 @@ class WebSocketCounterStack extends cdk.Stack {
     });
 
     // Grant the permissions to read and write to the DynamoDB table
+    counterTable.grantReadWriteData(defaultHandler);
     counterTable.grantReadWriteData(connectHandler);
     counterTable.grantReadWriteData(disconnectHandler);
     counterTable.grantReadWriteData(counterHandler);
@@ -61,8 +73,10 @@ class WebSocketCounterStack extends cdk.Stack {
     // WebSocket API definition
     const webSocketApi = new apiGateway.WebSocketApi(this, `${PROJECT_NAME}--WebSocketCounterAPI--${STAGE}`, {
       apiName: `${PROJECT_NAME}--WebSocketCounterAPI--${STAGE}`,
+      defaultRouteOptions: { integration: new integrations.WebSocketLambdaIntegration('DefaultIntegration', defaultHandler) },
       connectRouteOptions: { integration: new integrations.WebSocketLambdaIntegration('ConnectIntegration', connectHandler) },
       disconnectRouteOptions: { integration: new integrations.WebSocketLambdaIntegration('DisconnectIntegration', disconnectHandler) },
+      description: 'WebSocket connection for anything that is to be connected live.',
     });
 
     // Route for counting events
@@ -79,6 +93,7 @@ class WebSocketCounterStack extends cdk.Stack {
 
 
     // Grant WebSocket API permissions to manage connections if needed
+    webSocketApi.grantManageConnections(defaultHandler);
     webSocketApi.grantManageConnections(connectHandler);
     webSocketApi.grantManageConnections(disconnectHandler);
     webSocketApi.grantManageConnections(counterHandler);

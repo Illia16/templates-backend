@@ -1,18 +1,26 @@
-// websocketHandler.js
 import { API_KEY_WS } from '../config.js';
 
 let socket;
-let connectionId;
+let gameID;
+
+// TODO:
+// Upon succesfull connection save (in localStorage) connectionId, userID, userName so that can rejoin.
+// Clear it if/when user disconnects
 
 const setupWebSocket = () => {
     const userNameButton = document.getElementById('userName');    
     if ((socket && socket?.readyState !== 3) || !userNameButton.value) return;
 
-    connectionId = document.getElementById('connectionIdInput').value;
-    socket = new WebSocket(API_KEY_WS + `?userName=${userNameButton.value}${connectionId ? `&connectionId=${connectionId}` : ''}`);
+    gameID = document.getElementById('connectionIdInput').value;
+    socket = new WebSocket(API_KEY_WS + `?userName=${userNameButton.value}${gameID ? `&gameID=${gameID}` : ''}`);
 
-    socket.onopen = () => {
-        console.log('Connected to WebSocket');
+    socket.onopen = (event) => {
+        console.log('Connected to WebSocket', event);
+
+        // The one who "created" connection, gets ID to share with others
+        if (!gameID) {
+            handleDefaultRoute();
+        }
     };
 
     socket.onmessage = (event) => {
@@ -21,12 +29,31 @@ const setupWebSocket = () => {
 
         if (data.newCount) {
             document.getElementById('incrementData').innerHTML = data.newCount;
+
+            if (data.userList) {
+                console.log('data.userList', data.userList);
+                
+                const userData = data.userList;
+                // Update scores for every user
+                const userScoresDiv = document.getElementById('userScores');
+                userScoresDiv.innerHTML = '';
+                
+                for (const key in userData) {
+                    if (userData.hasOwnProperty(key)) {
+                        const user = userData[key];
+                        const userDiv = document.createElement('div');
+                        userDiv.textContent = `${user.userName}: ${user.score}`;
+                        userScoresDiv.appendChild(userDiv);
+                    }
+                }
+                // 
+            }
         }
 
-        // TODO
         if (data.createdConnectionId) {
             document.querySelector('#createdConnectionId strong').innerHTML = data.createdConnectionId;
-            document.getElementById('#createdConnectionId').style.display = 'block';
+            document.getElementById('createdConnectionId').style.display = 'block';
+            gameID = data.createdConnectionId;
         }
         // 
     };
@@ -42,16 +69,14 @@ const handleIncrement = () => {
         console.error('incrementValue must be a number', incrementValue)
         return
     }
-    console.log('socket', socket);
     
     if (socket && socket.readyState === 1) {
         const message = {
             action: 'count',
             increment: Number(incrementValue) || 1,
-            ...(connectionId ? { gameID: connectionId } : {}),
+            gameID: gameID,
         };
 
-        console.log('Sending message:', JSON.stringify(message));
         socket.send(JSON.stringify(message));
     } else {
         console.log('WebSocket is not connected');
@@ -63,6 +88,16 @@ const handleDisconnect = () => {
         socket.close();
     } else {
         console.log('WebSocket is not connected');
+    }
+}
+
+const handleDefaultRoute = () => {
+    if (socket && socket.readyState === 1) {
+        const message = {
+            action: 'dummyRoute',
+        };
+        console.log('Sending message to default route', JSON.stringify(message));
+        socket.send(JSON.stringify(message));
     }
 }
 

@@ -9,6 +9,8 @@
 
 <body>
     <h1>AWS CDK template JavaScript</h1>
+    <br />
+    <h2>Submit form and sent an email (with or without attachment)</h2>
     <form>
         <div>
             <label for="email">
@@ -58,8 +60,9 @@
         <button id="submit">Submit</button>
     </form>
 
+    <br />
     <div>
-        <h2>Counter</h2>
+        <h2>WebSocket connection</h2>
         <div>
             <input type="text" id="userName" placeholder="Enter your name">
         </div>
@@ -69,24 +72,21 @@
         <div>
             <button id="connectWebSocket">Create/Join</button>
         </div>
-        <!-- TODO -->
         <div id="createdConnectionId" style="display: none;">
             Send this to a friend who wants to join:
             <strong></strong>
         </div>
-        <!--  -->
-
-        <br />
-        <div id="incrementData">
-            0
+        <div>
+            <h3>Total score:</h3>
+            <div id="incrementData">0</div>
         </div>
+        <div id="userScores"></div>
         <div>
             <input type="text" id="incrementValue" placeholder="Increment by" />
         </div>
         <div>
             <button id="incrementCounter">Increment</button>
         </div>
-
         <div>
             <button id="disconnect">Disconnect</button>
         </div>
