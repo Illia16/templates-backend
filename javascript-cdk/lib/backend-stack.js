@@ -22,6 +22,8 @@ class BackendStack extends cdk.Stack {
     const STAGE = props.env.STAGE;
     const PROJECT_NAME = props.env.PROJECT_NAME;
     const CLOUDFRONT_URL = props.env.CLOUDFRONT_URL;
+    const CLOUDFRONT_USERNAME = props.env.CLOUDFRONT_USERNAME;
+    const CLOUDFRONT_PASSWORD = props.env.CLOUDFRONT_PASSWORD;
     const CERTIFICATE_ARN = props.env.CERTIFICATE_ARN;
   
     const account = cdk.Stack.of(this).account;
@@ -46,9 +48,59 @@ class BackendStack extends cdk.Stack {
 
 
     const cfFunction = new cloudfront.Function(this, `${PROJECT_NAME}--cf-fn--${STAGE}`, {
-        code: cloudfront.FunctionCode.fromFile({
-            filePath: __dirname + '/cf-functions/index.js',
-        }),
+        // code: cloudfront.FunctionCode.fromFile({
+        //     filePath: __dirname + '/cf-functions/index.js',
+        // }),
+        code: cloudfront.FunctionCode.fromInline(`function handler(event) {
+              const expectedUsername = "${CLOUDFRONT_USERNAME}";
+              const expectedPassword = "${CLOUDFRONT_PASSWORD}";
+
+              let request = event.request;
+              const headers = request.headers;
+              const isProd = headers.host.value === 'prod_domain_goes_here';
+
+              // Redirect if the request is from the CloudFront domain
+              if (['d3e8kfpm2wxov0.cloudfront.net'].includes(headers.host.value)) {
+                  const customDomain = headers.host.value === "d3e8kfpm2wxov0.cloudfront.net" ? "test-project-javascript.illusha.net" : "test-project-javascript.illusha.net"
+
+                  return {
+                      statusCode: 301,
+                      statusDescription: 'Moved Permanently',
+                      headers: {
+                          'location': { value: 'https://' + customDomain + request.uri }
+                      }
+                  };
+              }
+
+              const objReject = {
+                  statusCode: 401,
+                  statusDescription: 'Unauthorized',
+                  headers: {
+                      'www-authenticate': { value: 'Basic' },
+                  },
+              };
+
+              if (!isProd) {
+                  if (!headers.authorization) {
+                      return objReject;
+                  }
+              
+                  const authHeader = headers.authorization.value;
+                  const authString = authHeader.split(' ')[1];
+                  const authDecoded = Buffer.from(authString, 'base64').toString('utf-8');
+                  const split = authDecoded.split(':');
+              
+                  if (split[0] !== expectedUsername || split[1] !== expectedPassword) {
+                      return objReject;
+                  }
+              }
+
+              request.uri = request.uri.replace(/^(.*?)(\\/[^.\\/]*\\.[^.\\/]*)?\\/?$/, function($0, $1, $2) {
+                  return $1 + ($2 ? $2 : "/index.html");
+              });
+
+              return request;
+        }`),
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         functionName: `${PROJECT_NAME}--cf-fn--${STAGE}`,
         comment: 'CF function to handle redirects, basic auth, redirects from cf domain to a custom one etc.',

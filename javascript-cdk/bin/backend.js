@@ -25,6 +25,8 @@ new BackendStack(app, `${process.env.PROJECT_NAME}-stack-${process.env.ENV_NAME}
     STAGE: process.env.ENV_NAME,
     PROJECT_NAME: process.env.PROJECT_NAME,
     CLOUDFRONT_URL: `https://${process.env.CLOUDFRONT_URL}`,
+    CLOUDFRONT_USERNAME: process.env.CLOUDFRONT_USERNAME,
+    CLOUDFRONT_PASSWORD: process.env.CLOUDFRONT_PASSWORD,
     CERTIFICATE_ARN: process.env.CERTIFICATE_ARN,
   },
   description: `Backend stack for ${process.env.PROJECT_NAME} for ${process.env.ENV_NAME} environment.`

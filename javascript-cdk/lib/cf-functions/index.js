@@ -1,3 +1,4 @@
+// This file is used if CF function code is set "fromFile" (currently not used since can't pass env vars for basicAuth creds) 
 function handler(event) {
     const expectedUsername = 'user';
     const expectedPassword = 'pw';
