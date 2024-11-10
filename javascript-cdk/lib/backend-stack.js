@@ -48,9 +48,6 @@ class BackendStack extends cdk.Stack {
 
 
     const cfFunction = new cloudfront.Function(this, `${PROJECT_NAME}--cf-fn--${STAGE}`, {
-        // code: cloudfront.FunctionCode.fromFile({
-        //     filePath: __dirname + '/cf-functions/index.js',
-        // }),
         code: cloudfront.FunctionCode.fromInline(`function handler(event) {
               const expectedUsername = "${CLOUDFRONT_USERNAME}";
               const expectedPassword = "${CLOUDFRONT_PASSWORD}";
