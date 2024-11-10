@@ -58,7 +58,7 @@ class BackendStack extends cdk.Stack {
 
               // Redirect if the request is from the CloudFront domain
               if (['d3e8kfpm2wxov0.cloudfront.net'].includes(headers.host.value)) {
-                  const customDomain = headers.host.value === "d3e8kfpm2wxov0.cloudfront.net" ? "test-project-javascript.illusha.net" : "test-project-javascript.illusha.net"
+                  const customDomain = headers.host.value === "d3e8kfpm2wxov0.cloudfront.net" ? "${PROJECT_NAME}-${ENV_NAME}.illusha.net" : "${PROJECT_NAME}-${ENV_NAME}.illusha.net"
 
                   return {
                       statusCode: 301,
@@ -252,7 +252,7 @@ class BackendStack extends cdk.Stack {
           description: `API template using AWS CDK ${STAGE}`,
         },
         domainName: {
-          domainName: `api-${PROJECT_NAME}-${STAGE}.illusha.net`, // test-project-javascript.illusha.net OR is multiple projects use the same API can be api.*
+          domainName: `api-${PROJECT_NAME}-${STAGE}.illusha.net`, // ${PROJECT_NAME}-${ENV_NAME}.illusha.net OR is multiple projects use the same API can be api.*
           certificate: ssl_cert,
           // basePath: 'api'
         },
